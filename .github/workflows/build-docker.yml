@@ -1,0 +1,134 @@
+name: Build Docker Image
+
+on:
+  workflow_call:
+    inputs:
+      docker-run-workdir:
+        description: 'Docker working directory'
+        required: false
+        type: string
+        default: '/usr/local/services'
+      binary-name:
+        description: 'Binary name'
+        required: true
+        type: string
+      version:
+        description: 'Build version'
+        required: true
+        type: string
+      http-port:
+        description: 'HTTP port'
+        required: true
+        type: string
+      rpc-port:
+        description: 'RPC port'
+        required: true
+        type: string
+      pprof-port:
+        description: 'Pprof port'
+        required: true
+        type: string
+      docker-registry:
+        description: 'Docker registry (e.g., ghcr.io)'
+        required: true
+        type: string
+      binary-source-dir:
+        description: 'Binary source directory'
+        required: true
+        type: string
+      image-base:
+        description: 'Base Docker image name without tag'
+        required: true
+        type: string
+      image-name:
+        description: 'Complete Docker image name with tag'
+        required: true
+        type: string
+      environment:
+        description: 'Deployment environment'
+        required: false
+        type: string
+        default: 'dev'
+      base-image:
+        description: 'Base Docker image for build'
+        required: false
+        type: string
+        default: 'alpine:3.19.1'
+      timezone:
+        description: 'Container timezone'
+        required: false
+        type: string
+        default: 'Asia/Shanghai'
+
+jobs:
+  build-docker:
+    name: Build Docker
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME || github.actor }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD || secrets.GITHUB_TOKEN }}
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Download Binary
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.binary-name }}-binary
+          path: ${{ inputs.binary-source-dir }}
+
+      - name: Generate Dockerfile
+        run: |
+          BINARY_SOURCE_DIR="${{ inputs.binary-source-dir }}"
+          BUILD_APP_NAME="${{ inputs.binary-name }}"
+          DOCKER_RUN_WORKDIR="${{ inputs.docker-run-workdir }}"
+          ADDITIONAL_PORTS="${{ inputs.rpc-port }},${{ inputs.pprof-port }}"
+          BASE_IMAGE="${{ inputs.base-image }}"
+          TIMEZONE="${{ inputs.timezone }}"
+
+          cat << EOF > ${BINARY_SOURCE_DIR}/Dockerfile
+          FROM ${BASE_IMAGE}
+          USER root
+          STOPSIGNAL 37
+          WORKDIR ${DOCKER_RUN_WORKDIR}
+          COPY ./${BINARY_SOURCE_DIR}/${BUILD_APP_NAME} ./${BUILD_APP_NAME}
+          COPY ./locales ./locales
+          RUN chmod +x ./${BUILD_APP_NAME}
+          RUN rm -rf ./resources && mkdir -p ./resources
+          EXPOSE ${{ inputs.http-port }}
+          EXPOSE ${{ inputs.rpc-port }}
+          EXPOSE ${{ inputs.pprof-port }}
+          CMD ["sh", "-c", "./${BUILD_APP_NAME}"]
+          EOF
+
+          echo "=== Generated Dockerfile ==="
+          cat ${BINARY_SOURCE_DIR}/Dockerfile
+          echo "============================"
+
+      - name: Login to Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ inputs.docker-registry }}
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ env.DOCKER_PASSWORD }}
+
+      - name: Extract Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ inputs.image-base }}
+
+      - name: Build and Push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ inputs.binary-source-dir }}/Dockerfile
+          push: true
+          tags: ${{ inputs.image-name }}
+          labels: ${{ steps.meta.outputs.labels }}

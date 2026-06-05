@@ -1,0 +1,133 @@
+name: Build Binary
+
+on:
+  workflow_call:
+    inputs:
+      go-version:
+        description: 'Go version'
+        required: true
+        type: string
+      goproxy:
+        description: 'Go module proxy'
+        required: false
+        type: string
+        default: 'https://goproxy.cn,direct'
+      goprivate:
+        description: 'Go private modules'
+        required: false
+        type: string
+        default: ''
+      binary-name:
+        description: 'Binary name'
+        required: true
+        type: string
+      binary-source-dir:
+        description: 'Binary source directory'
+        required: true
+        type: string
+      binary-output:
+        description: 'Binary output path'
+        required: true
+        type: string
+      version:
+        description: 'Build version'
+        required: true
+        type: string
+      build-time:
+        description: 'Build time'
+        required: true
+        type: string
+      git-commit:
+        description: 'Git commit hash'
+        required: true
+        type: string
+      os:
+        description: 'Target OS'
+        required: false
+        type: string
+        default: 'linux'
+      arch:
+        description: 'Target architecture'
+        required: false
+        type: string
+        default: 'amd64'
+      upx-compress:
+        description: 'Enable UPX compression'
+        required: false
+        type: string
+        default: 'false'
+      build-script:
+        description: 'Path to build script (relative to repo root)'
+        required: false
+        type: string
+        default: 'scripts/build-linux.sh'
+
+jobs:
+  build-binary:
+    name: Build Binary
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go-version }}
+          check-latest: false
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Setup SSH Key for Private Modules
+        if: inputs.goprivate != ''
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.GIT_SSH_PRIVATE_KEY }}
+
+      - name: Configure Git to use SSH for Private Repos
+        if: inputs.goprivate != ''
+        run: |
+          git config --global url."git@github.com:".insteadOf "https://github.com/"
+
+      - name: Download Dependencies
+        run: |
+          export GOPROXY="${{ inputs.goproxy }}"
+          if [ -n "${{ inputs.goprivate }}" ]; then
+            export GOPRIVATE="${{ inputs.goprivate }}"
+          fi
+          go mod download
+
+      - name: Cache UPX
+        if: inputs.upx-compress == 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            /usr/bin/upx
+            /usr/bin/upx-ucl
+          key: upx-${{ runner.os }}-ucl
+          restore-keys: |
+            upx-${{ runner.os }}-
+
+      - name: Build Binary
+        run: |
+          chmod +x ${{ inputs.build-script }}
+
+          ./${{ inputs.build-script }} \
+            --version "${{ inputs.version }}" \
+            --build-time "${{ inputs.build-time }}" \
+            --git-commit "${{ inputs.git-commit }}" \
+            --binary-name "${{ inputs.binary-name }}" \
+            --output-dir "${{ inputs.binary-source-dir }}" \
+            --os "${{ inputs.os }}" \
+            --arch "${{ inputs.arch }}" \
+            --upx-compress "${{ inputs.upx-compress }}"
+
+          echo "Build completed: ${{ inputs.binary-name }}"
+          ls -lh "${{ inputs.binary-source-dir }}"
+
+      - name: Upload Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.binary-name }}-binary
+          path: ${{ inputs.binary-output }}
+          retention-days: 7
