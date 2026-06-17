@@ -1,7 +1,7 @@
 # ============================================
 # 前端应用 IngressRoute 模板 (Traefik)
-# Host 匹配模式 — 无 PathPrefix，无需 StripPrefix
-# 无 TLS
+# Host + PathPrefix 模式 — 需要 StripPrefix Middleware
+# 启用 TLS（Traefik ACME certResolver 自动签发证书）
 # ============================================
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -10,10 +10,15 @@ metadata:
   namespace: ${NAMESPACE}
 spec:
   entryPoints:
-    - ${INGRESS_ENTRY_POINT}
+    - ${INGRESS_TLS_ENTRY_POINT}
   routes:
   - match: ${INGRESS_MATCH_RULE}
     kind: Rule
     services:
     - name: ${APP_NAME}
       port: ${HTTP_PORT}
+    middlewares:
+    - name: ${INGRESS_STRIP_NAME}
+      namespace: ${NAMESPACE}
+  tls:
+    certResolver: ${INGRESS_CERT_RESOLVER}
