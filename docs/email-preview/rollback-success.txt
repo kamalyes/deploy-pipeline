@@ -1,0 +1,13 @@
+Subject: ✅ 回滚成功 · channel-service · 生产环境
+
+✅ 回滚成功
+
+服务: channel-service
+环境: 生产环境
+版本: ghcr.io/linmi-tech/channel-service:v1.3.9
+提交: f6448490a1b2
+操作人: kamalyes
+命名空间: business
+副本数: 3
+
+运行详情: https://github.com/linmi-tech/channel-service/actions/runs/41017700002

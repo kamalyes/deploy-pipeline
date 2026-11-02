@@ -1,0 +1,11 @@
+Subject: ℹ️ 📣 新 PR · ws-gateway · ci: 通知渠道增加邮件 · 开发环境
+
+📣 新 PR · ws-gateway · ci: 通知渠道增加邮件
+
+📦 **9 个文件**：➕ 4 新增 / 📝 5 修改 / ➖ 0 删除（+612/-18 行）
+- 新增 `scripts/send-email.py` 与四套邮件模板
+- 环境标签与配色改为可配置，补上了漏掉的 `staging`
+- 修复模板注释里的占位符被一并替换导致明细重复注入
+详见 [运行记录](https://github.com/linmi-tech/ws-gateway/actions/runs/41017700003)
+
+运行详情: https://github.com/linmi-tech/ws-gateway/actions/runs/41017700003

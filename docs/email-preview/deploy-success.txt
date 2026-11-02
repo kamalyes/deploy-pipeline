@@ -1,0 +1,14 @@
+Subject: ✅ 部署成功 · ws-gateway · 预发环境
+
+✅ 部署成功
+
+服务: ws-gateway
+环境: 预发环境
+版本: ghcr.io/linmi-tech/ws-gateway:dev-c36b7d0-20261030
+提交: c36b7d0a1b2c
+操作人: kamalyes
+命名空间: business
+副本数: 2
+端口: HTTP 8082 / RPC 9082
+
+运行详情: https://github.com/linmi-tech/ws-gateway/actions/runs/41017643925

@@ -1,0 +1,16 @@
+Subject: ❌ 部署失败 · lm-api · 生产环境
+
+❌ 部署失败
+
+服务: lm-api
+环境: 生产环境
+版本: ghcr.io/linmi-tech/lm-api:v1.4.2
+提交: 9d8680bf1a2b
+操作人: kamalyes
+命名空间: business
+
+失败原因:
+Error: ImagePullBackOff
+failed to pull image "ghcr.io/linmi-tech/lm-api:v1.4.2": rpc error: code = Unknown desc = failed to resolve reference: unauthorized
+
+运行详情: https://github.com/linmi-tech/lm-api/actions/runs/41017700001
